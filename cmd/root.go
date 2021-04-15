@@ -47,7 +47,9 @@ SYNOPSIS
     node               setup database nodes        init|ping|bash|ssh|admin| 
     pgsql              setup postgres clusters     init|node|dcs|postgres|template|business|monitor|service|monly
     infra              setup infrastructure        init|ca|dns|prometheus|grafana|loki|haproxy|target
-    clean              clean pgsql clusters        init|all|service|monitor|postgres|dcs
+    clean              clean pgsql clusters        all|service|monitor|postgres|dcs
+
+    # not implemented yet
     config             mange pigsty config file    init|edit|info|dump|path
     serve              run pigsty API server       init|start|stop|restart|reload|status
     demo               setup local demo            init|up|new|clean|start|dns
