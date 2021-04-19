@@ -1,5 +1,7 @@
 pigsty
 
+bin/
+
 .DS_Store
 .idea/
 .vscode/

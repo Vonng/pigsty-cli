@@ -43,30 +43,45 @@ NAME
     pigsty -- Pigsty Command-Line Interface v0.8 
 
 SYNOPSIS               
-    meta               setup meta nodes            init|download|repo|cache|ansible
-    node               setup database nodes        init|ping|bash|ssh|admin| 
+
+    meta               setup meta nodes            init|fetch|repo|cache|ansible
+    node               setup database nodes        init|ping|bash|ssh|admin 
     pgsql              setup postgres clusters     init|node|dcs|postgres|template|business|monitor|service|monly
     infra              setup infrastructure        init|ca|dns|prometheus|grafana|loki|haproxy|target
     clean              clean pgsql clusters        all|service|monitor|postgres|dcs
-
-    # not implemented yet
     config             mange pigsty config file    init|edit|info|dump|path
     serve              run pigsty API server       init|start|stop|restart|reload|status
     demo               setup local demo            init|up|new|clean|start|dns
     log                watch system log            query|postgres|patroni|pgbouncer|message
     pg                 pg operational tasks        user|db|svc|hba|log|psql|deploy|backup|restore|vacuum|repack
 
+
 EXAMPLES
-    1. infrastructure summary
+
+    1. infra summary
         pigsty infra
-    2. list pgsql clusters
-        pigsty infra
-    3. list pigsty nodes
+
+    2. pgsql clusters summary
+        pigsty pgsql
+
+    3. pigsty nodes summary
         pigsty node
-    4. init pgsql cluster 'pg-test'
+
+    4. create pgsql cluster 'pg-test'
         pigsty pgsql init -l pg-test
-    5. init new instance 10.10.10.13 of cluster pg-test
+
+    5. add new instance 10.10.10.13 of cluster 'pg-test'
         pigsty pgsql init -l 10.10.10.13
+
+    6. remove cluster 'pg-test'
+        pigsty clean -l pg-test
+
+    7. create user dbuser_vonng on cluster 'pg-test'
+        pigsty pg user dbuser_vonng -l pg-test
+
+    8. create database test2 on cluster 'pg-test'
+        pigsty pg db test -l pg-test
+
 
 `,
 	// Uncomment the following line if your bare application

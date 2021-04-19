@@ -211,5 +211,6 @@ func init() {
 	infraCmd.AddCommand(infraLokiCmd)
 	infraCmd.AddCommand(infraPgsqlCmd)
 	infraCmd.AddCommand(infraHaproxyCmd)
+	infraCmd.AddCommand(infraTargetCmd)
 	infraPrometheusCmd.AddCommand(infraPrometheusReloadCmd)
 }

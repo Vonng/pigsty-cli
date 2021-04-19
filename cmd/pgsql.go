@@ -50,6 +50,7 @@ var pgsqlCmd = &cobra.Command{
     pgsql pgbouncer                 init pgbouncer service
     pgsql template                  init postgres template database
     pgsql business                  init postgres business users and databases
+    pgsql promtail                  init promtail log collect agent
     pgsql config                    init patroni config template
     pgsql monly                     init monitor system in monitor-only mode
     pgsql hba                       init hba rule files
@@ -179,6 +180,22 @@ var pgsqlServiceCmd = &cobra.Command{
 			exec.WithLimit(varLimit),
 			exec.WithTags("service"),
 		)
+		return job.Run(context.TODO())
+	},
+}
+
+var pgsqlPromtailCmd = &cobra.Command{
+	Use:   "promtail",
+	Short: "init promtail",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		job := EX.NewJob(
+			exec.WithPlaybook("pgsql-promtail.yml"),
+			exec.WithName("init promtail"),
+			exec.WithLimit(varLimit),
+		)
+		if varForce {
+			job.Opts.ExtraVars["promtail_clean"] = true
+		}
 		return job.Run(context.TODO())
 	},
 }
@@ -342,6 +359,10 @@ func init() {
 
 	// pgsql service
 	pgsqlCmd.AddCommand(pgsqlServiceCmd)
+
+	// pgsql promtail (beta)
+	pgsqlCmd.AddCommand(pgsqlPromtailCmd)
+	pgsqlPromtailCmd.Flags().BoolVarP(&varForce, "force", "f", false, "force execution")
 
 	/**********************
 	* special subtasks

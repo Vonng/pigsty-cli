@@ -8,49 +8,47 @@ Command line tools for [pigsty](https://github.com/Vonng/pigsty)
 
 ```
 NAME
-    pigsty -- Pigsty Command-Line Interface v0.8
+    pigsty -- Pigsty Command-Line Interface v0.8 
 
-SYNOPSIS
-    meta               setup meta nodes            init|download|repo|cache|ansible
-    node               setup database nodes        init|ping|bash|ssh|admin|
+SYNOPSIS               
+
+    meta               setup meta nodes            init|fetch|repo|cache|ansible
+    node               setup database nodes        init|ping|bash|ssh|admin 
     pgsql              setup postgres clusters     init|node|dcs|postgres|template|business|monitor|service|monly
     infra              setup infrastructure        init|ca|dns|prometheus|grafana|loki|haproxy|target
-    clean              clean pgsql clusters        init|all|service|monitor|postgres|dcs
+    clean              clean pgsql clusters        all|service|monitor|postgres|dcs
     config             mange pigsty config file    init|edit|info|dump|path
     serve              run pigsty API server       init|start|stop|restart|reload|status
     demo               setup local demo            init|up|new|clean|start|dns
     log                watch system log            query|postgres|patroni|pgbouncer|message
     pg                 pg operational tasks        user|db|svc|hba|log|psql|deploy|backup|restore|vacuum|repack
 
+
 EXAMPLES
-    1. infrastructure summary
+
+    1. infra summary
         pigsty infra
-    2. list pgsql clusters
+
+    2. pgsql clusters summary
         pigsty infra
-    3. list pigsty nodes
+
+    3. pigsty nodes summary
         pigsty node
+
     4. init pgsql cluster 'pg-test'
         pigsty pgsql init -l pg-test
-    5. init new instance 10.10.10.13 of cluster pg-test
+
+    5. init new instance 10.10.10.13 of cluster 'pg-test'
         pigsty pgsql init -l 10.10.10.13
 
-Usage:
-  pigsty [command]
+    6. remove cluster 'pg-test'
+        pigsty clean -l pg-test
 
-Available Commands:
-  completion  generate the autocompletion script for the specified shell
-  help        Help about any command
-  infra       setup infrastructure
-  node        setup database nodes
-  pgsql       setup pgsql clusters
+    7. create user dbuser_vonng on cluster 'pg-test'
+        pigsty pg user dbuser_vonng -l pg-test
 
-Flags:
-  -h, --help               help for pigsty
-  -i, --inventory string   inventory file (default "./pigsty.yml")
-  -l, --limit string       limit execution hosts
-  -t, --tags strings       limit execution tasks
-
-Use "pigsty [command] --help" for more information about a command.
+    8. create database test2 on cluster 'pg-test'
+        pigsty pg db test -l pg-test
 ```
 
 

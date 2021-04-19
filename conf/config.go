@@ -25,6 +25,9 @@ type Config struct {
 	raw         []byte               `yaml:"-"`
 }
 
+/**************************************************************\
+*                           Getter                             *
+\**************************************************************/
 // GetCluster will return cluster according to name
 func (c *Config) GetCluster(name string) *Cluster {
 	if name == GROUP_META {
@@ -51,35 +54,6 @@ func (c *Config) GetInstance(name string) *Instance {
 	return nil
 }
 
-// IsMetaNode check whether given name is a meta node name or ip address
-func (c *Config) IsMetaNode(name string) bool {
-	for _, ins := range c.MetaCluster.Instances {
-		if name == ins.Name || name == ins.IP {
-			return true
-		}
-	}
-	return false
-}
-
-// NameType tells type of a given name: cluster|instance|ip|invalid
-func (c *Config) NameType(n string) string {
-	// ip address is not likely to be used as instance name and cluster name
-	if IsValidIP(n) {
-		if _, ipFound := c.IpMap[n]; ipFound {
-			return NameIP
-		} else {
-			return NameInvalid
-		}
-	}
-	if _, insFound := c.InstanceMap[n]; insFound {
-		return NameInstance
-	}
-	if _, clsFound := c.ClusterMap[n]; clsFound {
-		return NameCluster
-	}
-	return NameInvalid
-}
-
 // GetInstancesByName will translate name into instance list
 func (c *Config) GetInstancesByName(name string) []*Instance {
 	switch c.NameType(name) {
@@ -100,6 +74,41 @@ func (c *Config) GetInstancesByName(name string) []*Instance {
 	}
 }
 
+/**************************************************************\
+*                           Query                              *
+\**************************************************************/
+// NameType tells type of a given name: cluster|instance|ip|invalid
+func (c *Config) NameType(n string) string {
+	// ip address is not likely to be used as instance name and cluster name
+	if IsValidIP(n) {
+		if _, ipFound := c.IpMap[n]; ipFound {
+			return NameIP
+		} else {
+			return NameInvalid
+		}
+	}
+	if _, insFound := c.InstanceMap[n]; insFound {
+		return NameInstance
+	}
+	if _, clsFound := c.ClusterMap[n]; clsFound {
+		return NameCluster
+	}
+	return NameInvalid
+}
+
+// IsMetaNode check whether given name is a meta node name or ip address
+func (c *Config) IsMetaNode(name string) bool {
+	for _, ins := range c.MetaCluster.Instances {
+		if name == ins.Name || name == ins.IP {
+			return true
+		}
+	}
+	return false
+}
+
+/**************************************************************\
+*                        Serialization                         *
+\**************************************************************/
 // MarshalYAML will parse yaml.Node into Vars structure and preserve order
 func (c *Config) MarshalYAML() (interface{}, error) {
 	var tmp = struct {
@@ -162,50 +171,6 @@ func (c *Config) UnmarshalYAML(v *yaml.Node) (err error) {
 	return nil
 }
 
-// BuildIndex will fill auxiliary fields in config struct
-func (c *Config) BuildIndex() {
-	clsMap := make(map[string]*Cluster)
-	insMap := make(map[string]*Instance)
-	ipMap := make(map[string]*Instance)
-
-	// if meta node occurs on other pgsql group, it's vars will be overwritten
-	for i, cls := range c.Clusters {
-		if cls.Name == GROUP_META {
-			c.MetaCluster = &(c.Clusters[i])
-			continue
-		}
-		clsMap[cls.Name] = &(c.Clusters[i])
-		for j, ins := range cls.Instances {
-			insMap[ins.Name] = &(cls.Instances[j])
-			ipMap[ins.IP] = &(cls.Instances[j])
-		}
-	}
-
-	c.ClusterMap = clsMap
-	c.InstanceMap = insMap
-	c.IpMap = ipMap
-}
-
-// ParseConfig will unmarshal data into config
-func ParseConfig(data []byte) (cfg *Config, err error) {
-	err = yaml.Unmarshal(data, &cfg)
-	return
-}
-
-// LoadConfig will read config file from disk
-func LoadConfig(path string) (cfg *Config, err error) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	if cfg, err = ParseConfig(data); err != nil {
-		return
-	}
-	cfg.path = path
-	cfg.raw = data
-	return cfg, nil
-}
-
 // InfraInfo print digest about infrastructure
 func (cfg *Config) InfraInfo() string {
 	var buf bytes.Buffer
@@ -266,4 +231,52 @@ func (cfg *Config) InfraInfo() string {
 		}
 	}
 	return buf.String()
+}
+
+/**************************************************************\
+*                         Constructor                          *
+\**************************************************************/
+
+// ParseConfig will unmarshal data into config
+func ParseConfig(data []byte) (cfg *Config, err error) {
+	err = yaml.Unmarshal(data, &cfg)
+	return
+}
+
+// LoadConfig will read config file from disk
+func LoadConfig(path string) (cfg *Config, err error) {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if cfg, err = ParseConfig(data); err != nil {
+		return
+	}
+	cfg.path = path
+	cfg.raw = data
+	return cfg, nil
+}
+
+// BuildIndex will fill auxiliary fields in config struct
+func (c *Config) BuildIndex() {
+	clsMap := make(map[string]*Cluster)
+	insMap := make(map[string]*Instance)
+	ipMap := make(map[string]*Instance)
+
+	// if meta node occurs on other pgsql group, it's vars will be overwritten
+	for i, cls := range c.Clusters {
+		if cls.Name == GROUP_META {
+			c.MetaCluster = &(c.Clusters[i])
+			continue
+		}
+		clsMap[cls.Name] = &(c.Clusters[i])
+		for j, ins := range cls.Instances {
+			insMap[ins.Name] = &(cls.Instances[j])
+			ipMap[ins.IP] = &(cls.Instances[j])
+		}
+	}
+
+	c.ClusterMap = clsMap
+	c.InstanceMap = insMap
+	c.IpMap = ipMap
 }
