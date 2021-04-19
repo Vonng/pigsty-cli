@@ -16,8 +16,12 @@ limitations under the License.
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"github.com/Vonng/pigsty-cli/exec"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"strings"
 )
 
 // nodesCmd represents the nodes command
@@ -47,16 +51,93 @@ var nodesCmd = &cobra.Command{
 	},
 }
 
+var nodeInitCmd = &cobra.Command{
+	Use:   "init",
+	Short: "init database node",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		job := EX.NewJob(
+			exec.WithPlaybook("node.yml"),
+			exec.WithName("node init"),
+			exec.WithLimit(varLimit),
+			exec.WithTags(varTags...),
+		)
+		if varForce {
+			job.Opts.ExtraVars["dcs_exists_action"] = "clean"
+		}
+		return job.Run(context.TODO())
+	},
+}
+
+var nodeRemoveCmd = &cobra.Command{
+	Use:   "tune",
+	Short: "remove node",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		job := EX.NewJob(
+			exec.WithPlaybook("node-remove.yml"),
+			exec.WithName("node remove"),
+			exec.WithLimit(varLimit),
+		)
+		if varForce {
+			job.Opts.ExtraVars["yum_remove"] = true
+		}
+		return job.Run(context.TODO())
+	},
+}
+
+var nodeDcsCmd = &cobra.Command{
+	Use:   "init",
+	Short: "init database node consul",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		job := EX.NewJob(
+			exec.WithPlaybook("node.yml"),
+			exec.WithName("node dcs init"),
+			exec.WithLimit(varLimit),
+			exec.WithTags("dcs"),
+		)
+		if varForce {
+			job.Opts.ExtraVars["dcs_exists_action"] = "clean"
+		}
+		return job.Run(context.TODO())
+	},
+}
+
+var nodeTuneCmd = &cobra.Command{
+	Use:   "tune",
+	Short: "tune database node",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		job := EX.NewJob(
+			exec.WithPlaybook("node.yml"),
+			exec.WithName("node tune"),
+			exec.WithLimit(varLimit),
+			exec.WithTags("node_tuned"),
+		)
+		if varMode != "" {
+			varMode = strings.ToLower(varMode)
+			if varMode == "oltp" || varMode == "olap" || varMode == "crit" || varMode == "tiny" {
+				logrus.Warnf("unknown profile %s specified", varMode)
+			}
+			job.Opts.ExtraVars["node_tune"] = varMode
+		}
+		return job.Run(context.TODO())
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(nodesCmd)
 
-	// Here you will define your flags and configuration settings.
+	// node init
+	nodeInitCmd.Flags().BoolVarP(&varForce, "force", "f", false, "force execution")
+	nodesCmd.AddCommand(nodeInitCmd)
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// nodesCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// node remove
+	nodeRemoveCmd.Flags().BoolVarP(&varForce, "force", "f", false, "uninstall packages")
+	nodesCmd.AddCommand(nodeRemoveCmd)
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// nodesCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// node dcs
+	nodeDcsCmd.Flags().BoolVarP(&varForce, "force", "f", false, "force execution")
+	nodesCmd.AddCommand(nodeDcsCmd)
+
+	// node tune
+	nodeTuneCmd.Flags().StringVarP(&varMode, "mode", "m", "", "pgsql config template: oltp|olap|crit|tiny|other...")
+	nodesCmd.AddCommand(nodeTuneCmd)
 }

@@ -39,28 +39,28 @@ type Executor struct {
 func NewExecutor(path string) *Executor {
 	configPath, err := filepath.Abs(path)
 	if err != nil {
-		logrus.Fatalf("invalid config path %s, %w", path, err)
+		logrus.Fatalf("invalid config path %s, %s", path, err)
 		return nil
 	}
 
 	pigstyFile, pigstyDir := filepath.Base(configPath), filepath.Dir(configPath)
 	fi, err := os.Stat(configPath)
 	if err != nil {
-		logrus.Fatalf("invalid inventory path %s, %w", configPath, err)
+		logrus.Fatalf("invalid inventory path %s, %s", configPath, err)
 		return nil
 	}
 	if fi.IsDir() { // if dir is given, assume pigsty home dir
 		pigstyFile, pigstyDir = "pigsty.yml", configPath
 		configPath = filepath.Join(configPath, `pigsty.yml`)
 		if fi, err = os.Stat(configPath); err != nil {
-			logrus.Fatalf("could not find pigsty.yml in %s, %w", pigstyDir, err)
+			logrus.Fatalf("could not find pigsty.yml in %s, %s", pigstyDir, err)
 			return nil
 		}
 	}
 
 	cfg, err := conf.LoadConfig(configPath)
 	if err != nil {
-		logrus.Fatalf("fail to parse config %s, %w", path, err)
+		logrus.Fatalf("fail to parse config %s, %s", path, err)
 		return nil
 	}
 
@@ -72,6 +72,8 @@ func NewExecutor(path string) *Executor {
 		Jobs:      make(map[string]*Job),
 	}
 }
+
+func (e *Executor) Reload(){}
 
 // Static return static resource of this executor (.pigsty/public by default)
 func (e *Executor) StaticDir() string {

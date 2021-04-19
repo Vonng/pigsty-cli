@@ -45,8 +45,8 @@ NAME
 SYNOPSIS               
 
     meta               setup meta nodes            init|fetch|repo|cache|ansible
-    node               setup database nodes        init|ping|bash|ssh|admin 
-    pgsql              setup postgres clusters     init|node|dcs|postgres|template|business|monitor|service|monly
+    node               setup database nodes        init|tune|dcs|remove|ping|bash|ssh|admin 
+    pgsql              setup postgres clusters     init|node|dcs|postgres|template|business|monitor|service|monly|remove
     infra              setup infrastructure        init|ca|dns|prometheus|grafana|loki|haproxy|target
     clean              clean pgsql clusters        all|service|monitor|postgres|dcs
     config             mange pigsty config file    init|edit|info|dump|path

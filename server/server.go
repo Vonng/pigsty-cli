@@ -1,15 +1,18 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"errors"
 	"github.com/Vonng/pigsty-cli/exec"
-	"github.com/sirupsen/logrus"
-	"io"
-	"net/http"
-	"time"
-
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
 )
 
 /*************************************************************\
@@ -47,97 +50,103 @@ POST /api/:cluster/:hba              create new hba rules
 POST /api/:cluster/:job              create new hba rules
 \*************************************************************/
 
-var EX = exec.NewExecutor("/Users/vonng/pigsty/pigsty.yml")
+var PS *PigstyServer
 
-func NewEngine() *gin.Engine {
-	//gin.DefaultWriter = colorable.NewColorableStderr()
+type PigstyServer struct {
+	HomeDir    string
+	ListenAddr string
+	Server     *http.Server
+	Executor   *exec.Executor
+}
+
+func (ps *PigstyServer) ServerDir() string {
+	return filepath.Join(ps.HomeDir, ".pigsty")
+}
+
+func (ps *PigstyServer) ResourceDir() string {
+	// return filepath.Join(ps.HomeDir, ".pigsty", "public")
+	return "./public"
+}
+
+// NewPigstyServer will create new server
+func NewPigstyServer(listenAddr string, configPath string) *PigstyServer {
+	var ps PigstyServer
+	ps.ListenAddr = listenAddr
+	if ps.Executor = exec.NewExecutor(configPath); ps.Executor == nil {
+		return nil
+	}
+	ps.HomeDir = ps.Executor.WorkDir
+
+	// build router
 	r := gin.Default()
 
 	/******************************************
-	* config interface
+	 * config interface
 	 ******************************************/
 	// get config, put config, validate config
-	r.GET("/api/config", func(c *gin.Context) {
-		c.PureJSON(http.StatusOK, EX.Config)
-	})
-	r.POST("/api/config", func(c *gin.Context) {
-		c.PureJSON(http.StatusOK, EX.Config)
-	})
-	r.POST("/api/config/validate", func(c *gin.Context) {
-		c.PureJSON(http.StatusOK, EX.Config)
-	})
+	r.GET("/api/v1/config", GetConfigHandler)
+	r.POST("/api/v1/config", GetConfigHandler)
 
 	/******************************************
-	* get generate information
+	 * get generate information
 	 ******************************************/
-	// get clusters list info
-	r.GET("/api/pgsql", func(c *gin.Context) {
-		c.PureJSON(http.StatusOK, EX.Config.Clusters)
-	})
-
 	// get infrastructure info
-	r.GET("/api/infra", func(c *gin.Context) {
-		c.PureJSON(http.StatusOK, EX.Config.Clusters)
-	})
+	r.GET("/api/v1/infra", GetConfigHandler)
+	r.GET("/api/v1/pgsql", GetConfigHandler)
 
 	/******************************************
-	* cluster management
+	 * cluster management
 	 ******************************************/
-	// Single cluster:  get=info | post=create | delete=remove
-	// get: cluster info
-	r.GET("/api/pgsql/:cluster", func(c *gin.Context) {
-		logrus.Infof("select cluster %s", c.Param("cluster"))
-		c.PureJSON(http.StatusOK, EX.Config.GetCluster(c.Param("cluster")))
-	})
-	r.POST("/api/pgsql/:cluster", func(c *gin.Context) {
-		logrus.Infof("create cluster %s", c.Param("cluster"))
-		c.PureJSON(http.StatusOK, EX.Config.Clusters)
-	})
-	r.DELETE("/api/pgsql/:cluster", func(c *gin.Context) {
-		logrus.Infof("remove cluster %s", c.Param("cluster"))
-		c.PureJSON(http.StatusOK, EX.Config.Clusters)
-	})
+	// single cluster: GET=info | POST=create | DELETE=remove
+	r.GET("/api/v1/cls/:cluster", GetClusterHandler)
+	r.POST("/api/v1/cls/:cluster", GetClusterHandler)
+	r.DELETE("/api/v1/cls/:cluster", GetClusterHandler)
 
 	/******************************************
-	* instance management
+	 * instance management
 	 ******************************************/
-	r.GET("/api/pgsql/:cluster/seq/:seq", func(c *gin.Context) {
-		cluster, seq := c.Param("cluster"), c.Param("seq")
-		instance := fmt.Sprintf("%s-%s", cluster, seq)
-		logrus.Infof("create instance %s", instance)
-		c.PureJSON(http.StatusOK, EX.Config.GetInstance(instance))
-	})
-	r.POST("/api/:cluster/:seq", func(c *gin.Context) {
-		logrus.Infof("create instance %s-%s", c.Param("cluster"), c.Param("seq"))
-		c.PureJSON(http.StatusOK, EX.Config.Clusters)
-	})
-	r.DELETE("/api/:cluster/:seq", func(c *gin.Context) {
-		logrus.Infof("remove instance %s-%s", c.Param("cluster"), c.Param("seq"))
-		c.PureJSON(http.StatusOK, EX.Config.Clusters)
-	})
+	// single instance: GET=info | POST=create | DELETE=remove
+	r.GET("/api/v1/pgsql/:cluster/seq/:seq", GetClusterHandler)
+	r.POST("/api/v1/pgsql/:cluster/seq/:seq", GetClusterHandler)
+	r.DELETE("/api/v1/pgsql/:cluster/seq/:seq", GetClusterHandler)
 
-	r.GET("/stream", func(c *gin.Context) {
-		chanStream := make(chan int, 10)
-		go func() {
-			defer close(chanStream)
-			for i := 0; i < 500; i++ {
-				chanStream <- i
-				time.Sleep(time.Second * 1)
-			}
-		}()
-		c.Stream(func(w io.Writer) bool {
-			if msg, ok := <-chanStream; ok {
-				c.SSEvent("message", msg)
-				return true
-			}
-			return false
-		})
-	})
+	/******************************************
+	 * static resource
+	 ******************************************/
+	//logrus.Infof("serve resource from %s", ps.ResourceDir())
 	r.Use(static.Serve("/", static.LocalFile("./public", true)))
-	return r
+
+	srv := &http.Server{
+		Addr:    ps.ListenAddr,
+		Handler: r,
+	}
+
+	// return PigstyServer
+	ps.Server = srv
+	return &ps
+}
+
+func (ps *PigstyServer) Run() {
+	go func() {
+		if err := ps.Server.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
+			logrus.Fatalf("listen: %s\n", err)
+		}
+	}()
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logrus.Println("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := ps.Server.Shutdown(ctx); err != nil {
+		logrus.Fatal("Server forced to shutdown:", err)
+	}
+	logrus.Println("Server exiting")
 }
 
 func main() {
-	r := NewEngine()
-	r.Run()
+	PS = NewPigstyServer(":9633", `/Users/vonng/pigsty/pigsty.yml`)
+	PS.Run()
 }

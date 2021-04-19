@@ -30,6 +30,10 @@ release-linux: clean
 
 release: clean release-linux release-darwin # release-windows
 
+test:
+	go build -o pigsty
+	mv pigsty ~/pigsty/pigsty
+
 
 install: build
 	sudo install -m 0755 pigsty /usr/local/bin/pigsty

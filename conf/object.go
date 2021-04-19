@@ -23,8 +23,6 @@ type PgDatabase struct {
 		Schema string `yaml:"schema"`
 	} `yaml:"extensions,flow"`
 	Parameters map[string]string `yaml:"parameters,flow"`
-
-	nullMap map[string]bool // true if key is null
 }
 
 /**************************************************************\
@@ -40,15 +38,13 @@ type PgUser struct {
 	Inherit     bool              `yaml:"inherit"`     // can this role use inherited privileges?
 	Replication bool              `yaml:"replication"` // can this role do replication? false by default
 	BypassRLS   bool              `yaml:"bypassrls"`   // can this role bypass row level security? false by default
-	ConnLimit   int               `yaml:"connlimit"`   // connection limit, -1 disable limit
-	ExpireAt    string            `yaml:"expire_at"`   // 'timestamp' when this role is expired
-	ExpireIn    int               `yaml:"expire_in"`   // now + n days when this role is expired (OVERWRITE expire_at)
-	Roles       []string          `yaml:"roles,flow"`  // dborole_admin|dbrole_readwrite|dbrole_readonly
 	Pgbouncer   bool              `yaml:"pgbouncer"`   // optional, add this database to pgbouncer list? true by default
+	ConnLimit   int               `yaml:"connlimit"`   // connection limit, -1 disable limit
+	ExpireIn    int               `yaml:"expire_in"`   // now + n days when this role is expired (OVERWRITE expire_at)
+	ExpireAt    string            `yaml:"expire_at"`   // 'timestamp' when this role is expired
 	Comment     string            `yaml:"comment"`     // optional, comment string for database
+	Roles       []string          `yaml:"roles,flow"`  // dborole_admin|dbrole_readwrite|dbrole_readonly
 	Parameters  map[string]string `yaml:"parameters,flow"`
-
-	nullMap map[string]bool // true if key is null
 }
 
 /**************************************************************\
@@ -74,6 +70,4 @@ type PgService struct {
 	Selector       string            `yaml:"selector"`
 	SelectorBackup string            `yaml:"selector_backup"`
 	HAProxy        map[string]string `yaml:"haproxy"`
-
-	nullMap map[string]bool
 }

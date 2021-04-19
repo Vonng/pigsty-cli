@@ -21,8 +21,8 @@ type Config struct {
 	ClusterMap  map[string]*Cluster  `yaml:"-" json:"-"`
 	InstanceMap map[string]*Instance `yaml:"-" json:"-"`
 	IpMap       map[string]*Instance `yaml:"-" json:"-"`
-	path        string               `yaml:"-"`
-	raw         []byte               `yaml:"-"`
+	path        string
+	raw         []byte
 }
 
 /**************************************************************\

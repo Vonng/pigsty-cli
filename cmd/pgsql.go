@@ -95,7 +95,6 @@ var pgsqlInitCmd = &cobra.Command{
 		)
 		if varForce {
 			job.Opts.ExtraVars["pg_exists_action"] = "clean"
-			job.Opts.ExtraVars["dcs_exists_action"] = "clean"
 		}
 		return job.Run(context.TODO())
 	},
@@ -106,10 +105,10 @@ var pgsqlNodeCmd = &cobra.Command{
 	Short: "init pgsql node",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		job := EX.NewJob(
-			exec.WithPlaybook("pgsql.yml"),
+			exec.WithPlaybook("node.yml"),
 			exec.WithName("node init"),
 			exec.WithLimit(varLimit),
-			exec.WithTags("node"),
+			exec.WithTags(varTags...),
 		)
 		if varMode != "" {
 			if strings.HasSuffix(varMode, ".yml") {
@@ -127,7 +126,7 @@ var pgsqlDcsCmd = &cobra.Command{
 	Short: "init pgsql dcs service",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		job := EX.NewJob(
-			exec.WithPlaybook("pgsql.yml"),
+			exec.WithPlaybook("node.yml"),
 			exec.WithName("dcs init"),
 			exec.WithLimit(varLimit),
 			exec.WithTags("dcs"),
