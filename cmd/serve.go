@@ -31,8 +31,10 @@ var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Launch pigsty API server",
 	Long: `Usage:
-    pigsty serve -L|--listen-addr listen_address
-                 -D|--public-dir  resource dir
+    pigsty serve -i|--inventory   inventory file (./pigsty.yml by default)
+                 -L|--listen-addr listen_address (9633 by default)
+                 -D|--public-dir  resource dir   (./public by default)
+
 
 EXAMPLE:
 
@@ -64,7 +66,7 @@ EXAMPLE:
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		logrus.Infof("pigsty server @ %s , use config %s, public %s", varServeListenAddress, varConfig, varServeListenAddress)
+		logrus.Infof("pigsty server @ %s , use config %s, public %s", varServeListenAddress, varConfig, varServePublicDir)
 		server.InitDefaultServer(varConfig, varServePublicDir, varServeListenAddress)
 	},
 }
