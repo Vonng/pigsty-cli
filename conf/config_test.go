@@ -3,6 +3,7 @@ package conf
 import (
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"testing"
 )
 
@@ -39,5 +40,17 @@ func TestLoadConfig(t *testing.T) {
 		panic(err)
 	} else {
 		fmt.Println(string(b))
+	}
+}
+
+func TestOverwriteConfig(t *testing.T) {
+	b, err := ioutil.ReadFile(`/Users/vonng/pigsty/pigsty.yml`)
+	if err != nil {
+		panic(err)
+	}
+
+	err = OverwriteConfig(b, `/tmp/pigsty.yml`)
+	if err != nil {
+		panic(err)
 	}
 }

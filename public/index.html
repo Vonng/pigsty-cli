@@ -6,8 +6,8 @@
 </head>
 <body>
 <script>
-    var stream = new EventSource("/stream");
-    stream.addEventListener("message", function(e){
+    var stream = new EventSource("/api/v1/pgsql/pg-test/init");
+    stream.addEventListener("pg-test", function(e){
         console.log(e.data);
     });
 </script>

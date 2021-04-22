@@ -100,9 +100,6 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&varConfig, "inventory", "i", "./pigsty.yml", "inventory file")
 	rootCmd.PersistentFlags().StringVarP(&varLimit, "limit", "l", "", "limit execution hosts")
 	rootCmd.PersistentFlags().StringSliceVarP(&varTags, "tags", "t", []string{}, "limit execution tasks")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
 }
 
 // initConfig reads in config file and ENV variables if set.

@@ -1,8 +1,9 @@
-package main
+package server
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/Vonng/pigsty-cli/exec"
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
@@ -53,8 +54,10 @@ POST /api/:cluster/:job              create new hba rules
 var PS *PigstyServer
 
 type PigstyServer struct {
-	HomeDir    string
 	ListenAddr string
+	ConfigPath string
+	PublicDir  string
+	HomeDir    string
 	Server     *http.Server
 	Executor   *exec.Executor
 }
@@ -69,9 +72,11 @@ func (ps *PigstyServer) ResourceDir() string {
 }
 
 // NewPigstyServer will create new server
-func NewPigstyServer(listenAddr string, configPath string) *PigstyServer {
+func NewPigstyServer(configPath string, publicDir string, listenAddr string) *PigstyServer {
 	var ps PigstyServer
 	ps.ListenAddr = listenAddr
+	ps.ConfigPath = configPath
+	ps.PublicDir = publicDir
 	if ps.Executor = exec.NewExecutor(configPath); ps.Executor == nil {
 		return nil
 	}
@@ -85,36 +90,18 @@ func NewPigstyServer(listenAddr string, configPath string) *PigstyServer {
 	 ******************************************/
 	// get config, put config, validate config
 	r.GET("/api/v1/config", GetConfigHandler)
-	r.POST("/api/v1/config", GetConfigHandler)
-
-	/******************************************
-	 * get generate information
-	 ******************************************/
-	// get infrastructure info
-	r.GET("/api/v1/infra", GetConfigHandler)
-	r.GET("/api/v1/pgsql", GetConfigHandler)
-
-	/******************************************
-	 * cluster management
-	 ******************************************/
-	// single cluster: GET=info | POST=create | DELETE=remove
-	r.GET("/api/v1/cls/:cluster", GetClusterHandler)
-	r.POST("/api/v1/cls/:cluster", GetClusterHandler)
-	r.DELETE("/api/v1/cls/:cluster", GetClusterHandler)
-
-	/******************************************
-	 * instance management
-	 ******************************************/
-	// single instance: GET=info | POST=create | DELETE=remove
-	r.GET("/api/v1/pgsql/:cluster/seq/:seq", GetClusterHandler)
-	r.POST("/api/v1/pgsql/:cluster/seq/:seq", GetClusterHandler)
-	r.DELETE("/api/v1/pgsql/:cluster/seq/:seq", GetClusterHandler)
+	r.POST("/api/v1/config", PostConfigHandler)
+	r.GET("/api/v1/pgsql/:cluster/info", GetClusterHandler)
+	r.GET("/api/v1/pgsql/:cluster/init", InitClusterHandler)
+	r.GET("/api/v1/pgsql/:cluster/remove", RemoveClusterHandler)
+	//r.GET("/api/v1/pgsql/:cluster/init", InitClusterHandler)
+	//r.GET("/api/v1/pgsql/:cluster/remove", RemoveClusterHandler)
 
 	/******************************************
 	 * static resource
 	 ******************************************/
 	//logrus.Infof("serve resource from %s", ps.ResourceDir())
-	r.Use(static.Serve("/", static.LocalFile("./public", true)))
+	r.Use(static.Serve("/", static.LocalFile(publicDir, true)))
 
 	srv := &http.Server{
 		Addr:    ps.ListenAddr,
@@ -124,6 +111,16 @@ func NewPigstyServer(listenAddr string, configPath string) *PigstyServer {
 	// return PigstyServer
 	ps.Server = srv
 	return &ps
+}
+
+// Reload will create a new Executor according to config
+func (ps *PigstyServer) Reload(configPath string) error {
+	executor := exec.NewExecutor(configPath)
+	if executor == nil {
+		return fmt.Errorf("reload failed: invalid config")
+	}
+	ps.Executor = executor
+	return nil
 }
 
 func (ps *PigstyServer) Run() {
@@ -139,14 +136,13 @@ func (ps *PigstyServer) Run() {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-
 	if err := ps.Server.Shutdown(ctx); err != nil {
 		logrus.Fatal("Server forced to shutdown:", err)
 	}
 	logrus.Println("Server exiting")
 }
 
-func main() {
-	PS = NewPigstyServer(":9633", `/Users/vonng/pigsty/pigsty.yml`)
+func InitDefaultServer(configPath string, publicDir string, listenAddr string) {
+	PS = NewPigstyServer(configPath, publicDir, listenAddr)
 	PS.Run()
 }

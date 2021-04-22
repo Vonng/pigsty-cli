@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
+	"os"
 	"strings"
+	"time"
 )
 
 /**************************************************************\
@@ -241,6 +243,17 @@ func (cfg *Config) InfraInfo() string {
 func ParseConfig(data []byte) (cfg *Config, err error) {
 	err = yaml.Unmarshal(data, &cfg)
 	return
+}
+
+// OverwriteConfig will write config content, and old config if exists
+func OverwriteConfig(data []byte, path string) (err error) {
+	_, err = os.Stat(path)
+	if err == nil {
+		if err = os.Rename(path, path+".bak"+time.Now().Format("20060102150405")); err != nil {
+			//return err
+		}
+	}
+	return ioutil.WriteFile(path, data, 0644)
 }
 
 // LoadConfig will read config file from disk
