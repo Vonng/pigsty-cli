@@ -49,7 +49,7 @@ func TestOverwriteConfig(t *testing.T) {
 		panic(err)
 	}
 
-	err = OverwriteConfig(b, `/tmp/pigsty.yml`)
+	err = OverwriteConfig(b, `/tmp/`)
 	if err != nil {
 		panic(err)
 	}

@@ -3,9 +3,11 @@ package conf
 import (
 	"bytes"
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -247,13 +249,36 @@ func ParseConfig(data []byte) (cfg *Config, err error) {
 
 // OverwriteConfig will write config content, and old config if exists
 func OverwriteConfig(data []byte, path string) (err error) {
-	_, err = os.Stat(path)
-	if err == nil {
-		if err = os.Rename(path, path+".bak"+time.Now().Format("20060102150405")); err != nil {
-			//return err
-		}
+	// check whether it's a valid config
+	if _, err := ParseConfig(data); err != nil {
+		return fmt.Errorf("invalid config: %w", err)
 	}
-	return ioutil.WriteFile(path, data, 0644)
+
+	var dstPath, tmpPath, bakPath string
+	dstPath = path // fix dst path if it is a dir
+	if fi, err := os.Stat(path); err == nil && fi.IsDir() {
+		logrus.Infof("config path is a dir, append pigsty.yml to path", path, path)
+		dstPath = filepath.Join(path, "pigsty.yml")
+	}
+	tmpPath = dstPath + ".tmp"                                       // write new config to tmp
+	bakPath = dstPath + ".bak" + time.Now().Format("20060102150405") // write old config to bak
+	// write new config to tmp path
+	if err = ioutil.WriteFile(tmpPath, data, 0644); err != nil {
+		return fmt.Errorf("fail to write new config to tmp path: %s %w", tmpPath, err)
+	}
+	// backup old config to bak path
+	if fi, err := os.Stat(dstPath); err == nil && !fi.IsDir() {
+		if err = os.Rename(dstPath, bakPath); err != nil {
+			return fmt.Errorf("fail to swap tmp config %s to %s : %w", tmpPath, dstPath, err)
+		}
+		logrus.Warnf("rename existing config from %s to %s", dstPath, bakPath)
+	}
+	// swap new config with dst path
+	if err = os.Rename(tmpPath, dstPath); err != nil {
+		logrus.Errorf("fail to swap tmp config %s to %s", tmpPath, dstPath)
+		return fmt.Errorf("fail to swap tmp config %s to %s : %w", tmpPath, dstPath, err)
+	}
+	return nil
 }
 
 // LoadConfig will read config file from disk

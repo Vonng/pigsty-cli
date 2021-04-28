@@ -2,6 +2,7 @@ package exec
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/Vonng/pigsty-cli/conf"
 	"github.com/apenella/go-ansible/pkg/execute"
 	"github.com/apenella/go-ansible/pkg/playbook"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -33,6 +35,7 @@ type Executor struct {
 	Inventory string
 	Config    *conf.Config
 	Jobs      map[string]*Job
+	Lock      *sync.Mutex
 }
 
 // NewExecutor will create ansible playbook executor based on config path
@@ -73,7 +76,7 @@ func NewExecutor(path string) *Executor {
 	}
 }
 
-func (e *Executor) Reload(){}
+func (e *Executor) Reload() {}
 
 // Static return static resource of this executor (.pigsty/public by default)
 func (e *Executor) StaticDir() string {
@@ -128,23 +131,32 @@ func (e *Executor) NewJob(options ...JobOpts) *Job {
 \**************************************************************/
 // Job is spawned by executor
 type Job struct {
-	ID       string // uuid v1
-	Name     string // human readable job info
-	Playbook string // playbook name
-	Limit    string // limit execution targets
-	Tags     []string
-	Stdout   io.Writer // write output to this
-	Stderr   io.Writer // write error to this
-	Status   string    // ready | running | failed | success
-	StartAt  time.Time
-	DoneAt   time.Time
-	CMD      *playbook.AnsiblePlaybookCmd     // ansible command
-	Opts     *playbook.AnsiblePlaybookOptions // playbook options
-	Exec     *Executor                        // Executor
+	ID       string                           `json:"id"`       // uuid v1
+	Name     string                           `json:"name"`     // human readable job info
+	Playbook string                           `json:"playbook"` // playbook name
+	Limit    string                           `json:"limit"`    // limit execution targets
+	Tags     []string                         `json:"tags"`     // execution tags
+	LogPath  string                           `json:"log_path"` // write playbook log to ANSIBLE_LOG_PATH
+	Status   string                           `json:"status"`   // ready | running | failed | success
+	StartAt  time.Time                        `json:"start_at"` // job start at
+	DoneAt   time.Time                        `json:"done_at"`  // job done at
+	CMD      *playbook.AnsiblePlaybookCmd     `json:"-"`        // ansible command
+	Opts     *playbook.AnsiblePlaybookOptions `json:"-"`        // playbook options
+	Exec     *Executor                        `json:"-"`        // Executor
+
+	Stdout io.Writer          `json:"-"` // write output to this
+	Stderr io.Writer          `json:"-"` // write error to this
+	ctx    context.Context    // job context
+	cancel context.CancelFunc // job cancel func
 }
 
 // JobOpts will configure job
 type JobOpts func(*Job)
+
+func (j *Job) JSON() string {
+	b, _ := json.Marshal(j)
+	return string(b)
+}
 
 // WithStdout will set stdout
 func WithStdout(w io.Writer) JobOpts {
@@ -188,6 +200,12 @@ func WithLimit(limit string) JobOpts {
 	}
 }
 
+func WithLogPath(logPath string) JobOpts {
+	return func(j *Job) {
+		j.LogPath = logPath
+	}
+}
+
 // WithAnsibleOpts will overwrite entire options, use with caution!
 func WithAnsibleOpts(opts *playbook.AnsiblePlaybookOptions) JobOpts {
 	return func(j *Job) {
@@ -217,17 +235,42 @@ func (j *Job) CreateLog(name string) (io.WriteCloser, error) {
 // Run will run given command under context
 func (j *Job) Run(ctx context.Context) error {
 	setupOsEnv()
+	// create filelog
+	if j.LogPath != "" {
+		_ = os.Setenv("ANSIBLE_LOG_PATH", j.LogPath)
+		f, err := os.Create(j.LogPath)
+		f.Close()
+		if err != nil {
+			j.Status = JOB_FAILED
+			return err
+		}
+	}
 	j.StartAt = time.Now()
+	j.ctx, j.cancel = context.WithCancel(ctx)
 	j.Status = JOB_RUNNING
 	logrus.Infof(j.CMD.String())
-	err := j.CMD.Run(ctx)
+	err := j.CMD.Run(j.ctx)
 	j.DoneAt = time.Now()
 	if err != nil {
+		logrus.Errorf("job failed: %s", err)
 		j.Status = JOB_FAILED
 	} else {
 		j.Status = JOB_SUCCESS
 	}
 	return err
+}
+
+func (j *Job) Cancel() {
+	if j.cancel != nil {
+		j.cancel()
+	}
+	return
+}
+
+func (j *Job) MutexRun(ctx context.Context) error {
+	j.Exec.Lock.Lock()
+	defer j.Exec.Lock.Unlock()
+	return j.Run(ctx)
 }
 
 // AsyncRun will run tasks on background, a job id is returned
