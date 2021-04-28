@@ -1,0 +1,6 @@
+POST http://localhost:9633/api/v1/job?playbook=pgsql.yml&tags=pgsql&cluster=pg-test
+Accept: */*
+Cache-Control: no-cache
+
+###
+

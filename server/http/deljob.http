@@ -1,0 +1,6 @@
+DELETE http://localhost:9633/api/v1/job
+Accept: */*
+Cache-Control: no-cache
+
+###
+

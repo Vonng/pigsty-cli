@@ -48,3 +48,31 @@ func PostConfigHandler(c *gin.Context) {
 		"message": "ok",
 	})
 }
+
+//func OnConfigUpdate(data []byte) error {
+//	_, err := conf.ParseConfig(data)
+//	if err != nil {
+//		// invalid config
+//		c.JSON(http.StatusBadRequest, gin.H{
+//			"message": err.Error(),
+//		})
+//		return
+//	}
+//	if err := conf.OverwriteConfig(d, PS.ConfigPath); err != nil {
+//		c.JSON(http.StatusInternalServerError, gin.H{
+//			"message": err.Error(),
+//		})
+//		return
+//	}
+//
+//	if err := PS.Reload(PS.ConfigPath); err != nil {
+//		c.JSON(http.StatusBadRequest, gin.H{
+//			"message": err.Error(),
+//		})
+//		return
+//	}
+//
+//	c.JSON(http.StatusOK, gin.H{
+//		"message": "ok",
+//	})
+//}

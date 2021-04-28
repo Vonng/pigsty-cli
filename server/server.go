@@ -8,49 +8,17 @@ import (
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 )
 
-/*************************************************************\
-*                          Routers                            *
-GET    /api/config                   get global config file
-POST   /api/config                   update global config file
-POST   /api/:cluster                 init new pgsql cluster <cluster>
-POST   /api/:cluster/:instance       init new pgsql <instance> under <cluster>
-DELETE /api/:cluster                 destroy pgsql cluster <cluster>                   {job_id}
-DELETE /api/:instance                destroy pgsql instance <instance>                 {job_id}
-GET    /api/infra                    get global infra info
-GET    /api/pgsql                    get all cluster info
-GET    /api/:cluster                 get cluster info of <cluster>
-GET    /api/:cluster/jobs            # get jobs of cluster                            # SSE
-GET    /api/:cluster/:job            # get job info                                   # SSE
-POST   /api/infra/targets            update filesd config
-POST   /api/infra/haproxy            update haproxy
-
-
-GET   /api/                          get API list
-
-GET  /api/:cluster/instances         get instances info of <cluster>
-GET  /api/:cluster/services          get services info of <cluster>
-GET  /api/:cluster/users             get users info of <cluster>
-GET  /api/:cluster/databases         get databases info of <cluster>
-GET  /api/:cluster/primary           get primary instance info of <cluster>
-GET  /api/:cluster/:instance         get instance info of <cluster>
-GET  /api/:cluster/users             get databases info of <cluster>
-GET  /api/:cluster/databases         get databases info of <cluster>
-POST /api/:cluster                   create new pgsql cluster <cluster>
-POST /api/:cluster/:instance         create new pgsql <instance> under <cluster>
-POST /api/:cluster/:user             create new biz user under <cluster>
-POST /api/:cluster/:database         create new biz database under <cluster>
-POST /api/:cluster/:hba              create new hba rules
-POST /api/:cluster/:job              create new hba rules
-\*************************************************************/
-
+// PS is the default PigstyServer
 var PS *PigstyServer
 
 type PigstyServer struct {
@@ -60,15 +28,10 @@ type PigstyServer struct {
 	HomeDir    string
 	Server     *http.Server
 	Executor   *exec.Executor
-}
-
-func (ps *PigstyServer) ServerDir() string {
-	return filepath.Join(ps.HomeDir, ".pigsty")
-}
-
-func (ps *PigstyServer) ResourceDir() string {
-	// return filepath.Join(ps.HomeDir, ".pigsty", "public")
-	return "./public"
+	Job        *exec.Job // shitty-implementation: only one job allow one time
+	lock       sync.Mutex
+	jobLock    sync.RWMutex
+	cancel     context.CancelFunc
 }
 
 // NewPigstyServer will create new server
@@ -77,52 +40,130 @@ func NewPigstyServer(configPath string, publicDir string, listenAddr string) *Pi
 	ps.ListenAddr = listenAddr
 	ps.ConfigPath = configPath
 	ps.PublicDir = publicDir
+
+	if fi, err := os.Stat(ps.PublicDir); err != nil && os.IsNotExist(err) && !fi.IsDir() {
+		logrus.Errorf("public dir %s not exists", ps.PublicDir)
+		return nil
+	}
+	// make sure log dir exists
+	_ = os.Mkdir(ps.LogDir(), 0755)
+
 	if ps.Executor = exec.NewExecutor(configPath); ps.Executor == nil {
 		return nil
 	}
 	ps.HomeDir = ps.Executor.WorkDir
-
-	// build router
-	r := gin.Default()
-
-	/******************************************
-	 * config interface
-	 ******************************************/
-	// get config, put config, validate config
-	r.GET("/api/v1/config", GetConfigHandler)
-	r.POST("/api/v1/config", PostConfigHandler)
-	r.GET("/api/v1/pgsql/:cluster/info", GetClusterHandler)
-	r.GET("/api/v1/pgsql/:cluster/init", InitClusterHandler)
-	r.GET("/api/v1/pgsql/:cluster/remove", RemoveClusterHandler)
-	//r.GET("/api/v1/pgsql/:cluster/init", InitClusterHandler)
-	//r.GET("/api/v1/pgsql/:cluster/remove", RemoveClusterHandler)
-
-	/******************************************
-	 * static resource
-	 ******************************************/
-	//logrus.Infof("serve resource from %s", ps.ResourceDir())
-	r.Use(static.Serve("/", static.LocalFile(publicDir, true)))
-
-	srv := &http.Server{
+	ps.Server = &http.Server{
 		Addr:    ps.ListenAddr,
-		Handler: r,
+		Handler: DefaultRouter(publicDir),
 	}
-
-	// return PigstyServer
-	ps.Server = srv
 	return &ps
+}
+
+func (ps *PigstyServer) LogDir() string {
+	return filepath.Join(ps.PublicDir, "log")
+}
+
+type LogInfo struct {
+	Name  string `json:"name"`
+	Size  int64  `json:"size"`
+	Mtime int64  `json:"mtime"`
+}
+
+// ListLogdir will return
+func (ps *PigstyServer) ListLogDir() ([]LogInfo, error) {
+	logs, err := ioutil.ReadDir(ps.LogDir())
+	if err != nil {
+		return nil, err
+	}
+	var list []LogInfo
+	for _, log := range logs {
+		if !log.IsDir() {
+			list = append(list, LogInfo{log.Name(), log.Size(), log.ModTime().Unix()})
+		}
+	}
+	return list, nil
 }
 
 // Reload will create a new Executor according to config
 func (ps *PigstyServer) Reload(configPath string) error {
+	if ps.Job != nil {
+		return fmt.Errorf("executor can not be reloaed while running job")
+	}
+	// acquire lock
+	ps.lock.Lock()
+	defer ps.lock.Unlock()
+	// TODO: can not reload while running jobs
 	executor := exec.NewExecutor(configPath)
 	if executor == nil {
 		return fmt.Errorf("reload failed: invalid config")
 	}
 	ps.Executor = executor
+	ps.HomeDir = configPath
 	return nil
 }
 
+// RunJob will run job on background, error if running job already exists
+func (ps *PigstyServer) RunJob(job *exec.Job) (*exec.Job, error) {
+	ps.jobLock.Lock()
+	defer ps.jobLock.Unlock()
+	if ps.Job != nil && (ps.Job.Status == exec.JOB_RUNNING || ps.Job.Status == exec.JOB_READY) {
+		return ps.Job, fmt.Errorf("another job is running: %s", ps.Job.ID)
+	}
+	ps.Job = job
+	ctx, cancel := context.WithCancel(context.TODO())
+	ps.cancel = cancel
+	go ps.Job.Run(ctx)
+	return job, nil
+}
+
+// CancelJob will cancel current job
+func (ps *PigstyServer) DelJob() *exec.Job {
+	ps.jobLock.Lock()
+	defer ps.jobLock.Unlock()
+
+	if ps.Job != nil && (ps.Job.Status == exec.JOB_RUNNING || ps.Job.Status == exec.JOB_READY) {
+		ps.Job.Cancel()
+		job := ps.Job
+		ps.Job = nil
+		return job
+	}
+	if ps.Job != nil {
+		ps.Job = nil
+	}
+	return nil
+}
+
+// Get Job will return current running job, nil if not exists
+func (ps *PigstyServer) GetJob() *exec.Job {
+	ps.jobLock.RLock()
+	defer ps.jobLock.RUnlock()
+	if ps.Job != nil {
+		if ps.Job.Status == exec.JOB_RUNNING || ps.Job.Status == exec.JOB_READY {
+			return ps.Job
+		} else {
+			ps.Job = nil // remove finished jobs
+			return nil
+		}
+	}
+	return nil
+}
+
+func DefaultRouter(publicDir string) *gin.Engine {
+	r := gin.Default()
+	// config
+	r.GET("/api/v1/config/", GetConfigHandler)
+	r.POST("/api/v1/config/", PostConfigHandler)
+
+	// job (list get create del)
+	r.GET("/api/v1/jobs", ListJobHandler)
+	r.GET("/api/v1/job", GetJobHandler)
+	r.POST("/api/v1/job", PostJobHandler)
+	r.DELETE("/api/v1/job", DelJobHandler)
+	r.Use(static.Serve("/", static.LocalFile(publicDir, true)))
+	return r
+}
+
+// run will launch server and listen
 func (ps *PigstyServer) Run() {
 	go func() {
 		if err := ps.Server.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
@@ -134,6 +175,11 @@ func (ps *PigstyServer) Run() {
 	<-quit
 	logrus.Println("Shutting down server...")
 
+	// cancel running job
+	if ps.Job != nil {
+		ps.Job.Cancel()
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := ps.Server.Shutdown(ctx); err != nil {
@@ -142,7 +188,11 @@ func (ps *PigstyServer) Run() {
 	logrus.Println("Server exiting")
 }
 
+// InitDefaultServer will init default pigsty singleton
 func InitDefaultServer(configPath string, publicDir string, listenAddr string) {
 	PS = NewPigstyServer(configPath, publicDir, listenAddr)
+	if PS == nil {
+		os.Exit(1)
+	}
 	PS.Run()
 }

@@ -38,7 +38,7 @@ func InitClusterHandler(c *gin.Context) {
 	pr, pw := io.Pipe()
 	defer pw.Close()
 	defer pr.Close()
-	br := bufio.NewReader(pr)
+	br := bufio.NewReaderSize(pr, 64)
 	job := PS.Executor.NewJob(
 		exec.WithPlaybook("pgsql.yml"),
 		exec.WithName("pgsql init"),
@@ -53,33 +53,52 @@ func InitClusterHandler(c *gin.Context) {
 	// create async reader generate sse event
 	var wg sync.WaitGroup
 	wg.Add(1)
+
+	chanStream := make(chan string, 1)
 	go func() {
+		defer close(chanStream)
 		for {
 			s, err := br.ReadString('\n')
 			if err != nil {
 				break
 			}
+			chanStream <- s
 			logrus.Infof(s)
-			c.SSEvent(cluster, s)
+			//c.SSEvent(cluster, s)
 		}
 		logrus.Infof("sse event sent")
 		wg.Done()
 	}()
 
-	fmt.Println("run tasks, %v", job)
-	err := job.Run(c)
-	pw.Close()
-	if err != nil {
-		c.JSON(http.StatusConflict, gin.H{
-			"message": err.Error(),
-		})
-	} else {
-		wg.Wait() // wait all message are flushed
-		c.JSON(http.StatusOK, gin.H{
-			"message": "ok",
-		})
-		return
-	}
+	go func() {
+		err := job.Run(c)
+		pw.Close()
+		if err != nil {
+			logrus.Errorf("fail to run tasks %s", err)
+		}
+	}()
+
+	c.Stream(func(w io.Writer) bool {
+		if msg, ok := <-chanStream; ok {
+			c.SSEvent(cluster, msg)
+			return true
+		}
+		return false
+	})
+
+	//fmt.Println("run tasks, %v", job)
+
+	//if err != nil {
+	//	c.JSON(http.StatusConflict, gin.H{
+	//		"message": err.Error(),
+	//	})
+	//} else {
+	//	wg.Wait() // wait all message are flushed
+	//	c.JSON(http.StatusOK, gin.H{
+	//		"message": "ok",
+	//	})
+	//	return
+	//}
 }
 
 // PostClusterHandler will trigger cluster creation
@@ -118,7 +137,7 @@ func RemoveClusterHandler(c *gin.Context) {
 		wg.Done()
 	}()
 
-	fmt.Println("run tasks, %v", job)
+	//fmt.Println("run tasks, %v", job)
 	err := job.Run(c)
 	pw.Close()
 	if err != nil {

@@ -34,7 +34,7 @@ var serveCmd = &cobra.Command{
     pigsty serve -i|--inventory   inventory file (./pigsty.yml by default)
                  -L|--listen-addr listen_address (9633 by default)
                  -D|--public-dir  resource dir   (./public by default)
-
+                  (will create <public_dir>/log for logging purpose)
 
 EXAMPLE:
 
@@ -44,26 +44,23 @@ EXAMPLE:
     # get config
         curl http://localhost:9633/api/v1/config
    
-    # post config
-        curl -X POST http://localhost:9633/api/v1/config -d@<config.yml>
+    # post config (YAML config as body)
+        curl -X POST http://localhost:9633/api/v1/config -d@<pigsty.yml>
    
-    # get cluster info
-        curl -X GET http://localhost:9633/api/v1/pgsql/:cluster/info
-   
-    # create cluster (SSE: type=:cluster )
-        curl -X GET http://localhost:9633/api/v1/pgsql/:cluster/init
-        args: force=true will force init (remove existing cluster)
-        args: tags=only execute partial of the playbook
-   
-    # remove cluster (SSE: type=:cluster )
-        curl -X GET http://localhost:9633/api/v1/pgsql/:cluster/remove
-    
-    # e.g: remove pg-test cluster
-        curl http://localhost:9633/api/v1/pgsql/pg-test/remove
+    # list jobs
+        curl -X GET http://localhost:9633/api/v1/jobs
 
-    # remove pg-test monitor and service
-        curl http://localhost:9633/api/v1/pgsql/pg-test/remove?tags=monitor,service
+    # get current job
+        curl -X GET http://localhost:9633/api/v1/job
 
+    # create new job ( pgsql init @ pg-test )
+        curl -X POST http://localhost:9633/api/v1/job?playbook=pgsql&cluster=pg-test
+
+    # create new job ( pgsql remove @ pg-test2 )
+        curl -X POST http://localhost:9633/api/v1/job?playbook=pgsql-remove&cluster=pg-test2
+
+    # cancel job
+        curl -X DELETE http://localhost:9633/api/v1/job
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		logrus.Infof("pigsty server @ %s , use config %s, public %s", varServeListenAddress, varConfig, varServePublicDir)
