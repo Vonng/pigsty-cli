@@ -21,6 +21,7 @@ import (
 // PS is the default PigstyServer
 var PS *PigstyServer
 
+// PigstyServer holds required information
 type PigstyServer struct {
 	ListenAddr string
 	ConfigPath string
@@ -59,10 +60,12 @@ func NewPigstyServer(configPath string, publicDir string, listenAddr string) *Pi
 	return &ps
 }
 
+// LogDir return log directory path (currently is log under public dir)
 func (ps *PigstyServer) LogDir() string {
 	return filepath.Join(ps.PublicDir, "log")
 }
 
+// LogInfo Hold log name, size, mtime info of job logs
 type LogInfo struct {
 	Name  string `json:"name"`
 	Size  int64  `json:"size"`
