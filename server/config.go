@@ -3,12 +3,14 @@ package server
 import (
 	"github.com/Vonng/pigsty-cli/conf"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"net/http"
 )
 
 // GetConfigHandler will serve config file
 func GetConfigHandler(c *gin.Context) {
-	c.File(PS.ConfigPath)
+	b, _ := ioutil.ReadFile(PS.ConfigPath)
+	c.String(http.StatusOK, string(b))
 }
 
 // PostConfigHandler will update default configuration file with posted content
@@ -48,4 +50,3 @@ func PostConfigHandler(c *gin.Context) {
 		"message": "ok",
 	})
 }
-

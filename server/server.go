@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/Vonng/pigsty-cli/exec"
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -99,7 +101,7 @@ func NewPigstyServer(opts ...ServerOpt) *PigstyServer {
 		opt(&ps)
 	}
 	// make sure data (log|job) dir exists
-	if err := MakeLogDir(ps.DataDir); err != nil {
+	if err := MakeDataDir(ps.DataDir); err != nil {
 		logrus.Fatalf("fail to log dir %s %s", ps.DataDir, err.Error())
 		return nil
 	}
@@ -117,22 +119,47 @@ func NewPigstyServer(opts ...ServerOpt) *PigstyServer {
 /****************************************************
 *  Log Info
 /****************************************************/
-// MakeLogDir will make sure log dir exists
-func MakeLogDir(path string) error {
-	logrus.Infof("check log dir %s", path)
+// MakeDataDir will make sure data dir exists
+func MakeDataDir(path string) error {
+	logrus.Infof("check data dir %s", path)
+	if fi, err := os.Stat(path); err == nil && !fi.IsDir() {
+		// if path exists and is a file (exit)
+		return fmt.Errorf("path exists and is regular file: %s %w", path, err)
+	}
 	_ = os.MkdirAll(path, 0755)
-	if fi, err := os.Stat(path); err != nil && os.IsNotExist(err) {
-		if err = os.Mkdir(path, 0755); err != nil {
-			return fmt.Errorf("path exists and is regular file: %s %w", path, err)
-		}
+	_ = os.MkdirAll(filepath.Join(path, "log"), 0755)
+	_ = os.MkdirAll(filepath.Join(path, "job"), 0755)
+	if fi, err := os.Stat(path); err == nil && fi.IsDir() {
 		return nil
 	} else {
-		if fi.IsDir() {
-			return nil // log dir exists (but still may not have right privilege)
-		} else {
-			return fmt.Errorf("path exists and is regular file: %s", path)
-		}
+		return fmt.Errorf("fail to make data dir: %s", path)
 	}
+}
+
+func (ps *PigstyServer) JobDir() string {
+	return filepath.Join(ps.DataDir, "job")
+}
+
+func (ps *PigstyServer) LogDir() string {
+	return filepath.Join(ps.DataDir, "log")
+}
+
+func (ps *PigstyServer) LogPath(name string) string {
+	return filepath.Join(ps.DataDir, "log", name)
+}
+
+func (ps *PigstyServer) JobPath(name string) string {
+	return filepath.Join(ps.DataDir, "job", name)
+}
+
+func (ps *PigstyServer) SaveJob(job *exec.Job) error {
+	jobPath := ps.JobPath(job.ID)
+	b, err := json.Marshal(job)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(jobPath, b, 0644)
 }
 
 // LogInfo Hold log name, size, mtime info of job logs
@@ -245,7 +272,7 @@ func (ps *PigstyServer) DefaultRouter() *gin.Engine {
 		r.Use(static.Serve("/", EmbedFileSystem(http.FS(Resource))))
 	} else {
 		logrus.Infof("use public dir resource @ %s", ps.PublicDir)
-		r.Use(static.Serve("/", static.LocalFile(ps.PublicDir, false)))
+		r.Use(static.Serve("/", static.LocalFile(ps.PublicDir, true)))
 	}
 
 	return r

@@ -39,7 +39,13 @@ serve:
 
 run: build serve
 
+r:
+	./pigsty serve -i ~/pigsty/pigsty.yml
+o:
+	open http://localhost:9633
+
 install: build
 	sudo install -m 0755 pigsty /usr/local/bin/pigsty
 
 copy:
+	scp bin/pigsty_v0.8.0_linux-amd64 pj:/bin/pigsty
