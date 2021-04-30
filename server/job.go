@@ -5,8 +5,9 @@ import (
 	"github.com/Vonng/pigsty-cli/exec"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
 	"net/http"
-	"path/filepath"
+	"path"
 	"strings"
 )
 
@@ -18,24 +19,24 @@ func GetJobHandler(c *gin.Context) {
 			"data":    PS.Job,
 		})
 	} else {
-		c.JSON(http.StatusNotFound, gin.H{
-			"message": "no job running",
+		c.JSON(http.StatusOK, gin.H{
+			"message": "job not found",
 			"data":    nil,
 		})
 	}
 }
 
-// ListJobHandler will iter job directory and return job list
+// ListJobHandler will serve config file
 func ListJobHandler(c *gin.Context) {
-	if logInfo, err := PS.ListLogDir(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
+	if jobInfo, err := PS.LisJobDir(); err != nil {
+		c.JSON(http.StatusOK, gin.H{
 			"message": "can not list jobs",
 			"data":    nil,
 		})
 	} else {
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "ok",
-			"data":    logInfo,
+			"data":    jobInfo,
 		})
 	}
 }
@@ -59,12 +60,18 @@ func PostJobHandler(c *gin.Context) {
 		exec.WithTags(tags...),
 	)
 	//logFilenName := fmt.Sprintf(`%s-%s@%s.log`)
-	job.LogPath = filepath.Join(PS.LogDir(), job.ID)
+	job.LogPath = PS.LogPath(job.ID)
+	logrus.Infof("new job created, log: %s", job.LogPath)
+
+	// save job info to datadir/job/
+	if err := PS.SaveJob(job); err != nil {
+		logrus.Errorf("fail to save job to %s", PS.JobPath(job.ID))
+	}
 
 	if j, err := PS.RunJob(job); err != nil {
-		c.JSON(http.StatusConflict, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "job exists",
-			"data":    j,
+			"data":    nil,
 		})
 	} else {
 		c.JSON(http.StatusOK, gin.H{
@@ -82,9 +89,58 @@ func DelJobHandler(c *gin.Context) {
 			"data":    job,
 		})
 	} else {
-		c.JSON(http.StatusNotFound, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"message": "job not found",
 			"data":    nil,
 		})
 	}
+}
+
+// ListLogHandler will iter log directory and return log(job) list
+func ListLogHandler(c *gin.Context) {
+	if logInfo, err := PS.ListLogDir(); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "can not list logs",
+			"data":    nil,
+		})
+	} else {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "ok",
+			"data":    logInfo,
+		})
+	}
+}
+
+// Get log by job id
+func GetLogHandler(c *gin.Context) {
+	jobID := c.Param("jobid")
+	logPath := PS.LogPath(jobID)
+	b, _ := ioutil.ReadFile(logPath)
+	c.String(http.StatusOK, string(b))
+	//c.File(logPath)
+}
+
+// GetLatestLogHandler
+func GetLatestLogHandler(c *gin.Context) {
+	logs, err := PS.ListLogDir()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message": "fail to list jobs",
+			"data":    nil,
+		})
+		return
+	}
+
+	var maxInd int
+	var maxMtime int64
+	for i, log := range logs {
+		if log.Mtime >= maxMtime {
+			maxInd = i
+		}
+	}
+
+	latestLogName := logs[maxInd].Name
+	jobPath := path.Join(PS.DataDir, latestLogName)
+	logrus.Infof("server latest log %s of %v", jobPath, logs)
+	c.File(jobPath)
 }

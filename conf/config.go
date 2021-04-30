@@ -257,7 +257,7 @@ func OverwriteConfig(data []byte, path string) (err error) {
 	var dstPath, tmpPath, bakPath string
 	dstPath = path // fix dst path if it is a dir
 	if fi, err := os.Stat(path); err == nil && fi.IsDir() {
-		logrus.Infof("config path is a dir, append pigsty.yml to path", path, path)
+		logrus.Infof("config path %s is a dir, append pigsty.yml to path", path)
 		dstPath = filepath.Join(path, "pigsty.yml")
 	}
 	tmpPath = dstPath + ".tmp"                                       // write new config to tmp

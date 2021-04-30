@@ -121,6 +121,8 @@ func (e *Executor) NewJob(options ...JobOpts) *Job {
 		Options:   job.Opts,
 		Exec:      execute.NewDefaultExecute(execOpts...),
 	}
+	job.Command = job.CMD.String()
+	job.StartAt = time.Now()
 	job.Status = JOB_READY
 	e.Jobs[job.ID] = &job
 	return &job
@@ -140,6 +142,7 @@ type Job struct {
 	Status   string                           `json:"status"`   // ready | running | failed | success
 	StartAt  time.Time                        `json:"start_at"` // job start at
 	DoneAt   time.Time                        `json:"done_at"`  // job done at
+	Command  string                           `json:"command"`  // job raw shell command
 	CMD      *playbook.AnsiblePlaybookCmd     `json:"-"`        // ansible command
 	Opts     *playbook.AnsiblePlaybookOptions `json:"-"`        // playbook options
 	Exec     *Executor                        `json:"-"`        // Executor
@@ -236,6 +239,7 @@ func (j *Job) CreateLog(name string) (io.WriteCloser, error) {
 func (j *Job) Run(ctx context.Context) error {
 	setupOsEnv()
 	// create filelog
+	j.Command = j.CMD.String()
 	if j.LogPath != "" {
 		_ = os.Setenv("ANSIBLE_LOG_PATH", j.LogPath)
 		f, err := os.Create(j.LogPath)
