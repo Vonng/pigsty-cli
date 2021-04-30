@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
 	"github.com/Vonng/pigsty-cli/exec"
@@ -12,12 +13,39 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
 )
 
+/****************************************************
+*  Embed Resources
+/****************************************************/
+
+//go:embed index.html
+//go:embed static
+//go:embed img
+//go:embed *.ico
+//go:embed *.png
+//go:embed *.json
+//go:embed *.txt
+var Resource embed.FS
+
+type embedFileSystem struct {
+	http.FileSystem
+}
+
+func EmbedFileSystem(fs http.FileSystem) *embedFileSystem {
+	return &embedFileSystem{fs}
+}
+
+func (fs *embedFileSystem) Exists(prefix string, filepath string) bool {
+	return true
+}
+
+/****************************************************
+*  Pigsty Server
+/****************************************************/
 // PS is the default PigstyServer
 var PS *PigstyServer
 
@@ -25,6 +53,7 @@ var PS *PigstyServer
 type PigstyServer struct {
 	ListenAddr string
 	ConfigPath string
+	DataDir    string
 	PublicDir  string
 	HomeDir    string
 	Server     *http.Server
@@ -35,34 +64,75 @@ type PigstyServer struct {
 	cancel     context.CancelFunc
 }
 
-// NewPigstyServer will create new server
-func NewPigstyServer(configPath string, publicDir string, listenAddr string) *PigstyServer {
-	var ps PigstyServer
-	ps.ListenAddr = listenAddr
-	ps.ConfigPath = configPath
-	ps.PublicDir = publicDir
+// ServerOpt will configure pigsty server
+type ServerOpt func(server *PigstyServer)
 
-	if fi, err := os.Stat(ps.PublicDir); err != nil && os.IsNotExist(err) && !fi.IsDir() {
-		logrus.Errorf("public dir %s not exists", ps.PublicDir)
+// WithStdout will set stdout
+func WithListenAddress(listenAddr string) ServerOpt {
+	return func(ps *PigstyServer) {
+		ps.ListenAddr = listenAddr
+	}
+}
+
+func WithPublicDir(publicDir string) ServerOpt {
+	return func(ps *PigstyServer) {
+		ps.PublicDir = publicDir
+	}
+}
+
+func WithDataDir(dataDir string) ServerOpt {
+	return func(ps *PigstyServer) {
+		ps.DataDir = dataDir
+	}
+}
+
+func WithConfigPath(configPath string) ServerOpt {
+	return func(ps *PigstyServer) {
+		ps.ConfigPath = configPath
+	}
+}
+
+// NewPigstyServer will create new server
+func NewPigstyServer(opts ...ServerOpt) *PigstyServer {
+	var ps PigstyServer
+	for _, opt := range opts {
+		opt(&ps)
+	}
+	// make sure data (log|job) dir exists
+	if err := MakeLogDir(ps.DataDir); err != nil {
+		logrus.Fatalf("fail to log dir %s %s", ps.DataDir, err.Error())
 		return nil
 	}
-	// make sure log dir exists
-	_ = os.Mkdir(ps.LogDir(), 0755)
-
-	if ps.Executor = exec.NewExecutor(configPath); ps.Executor == nil {
+	if ps.Executor = exec.NewExecutor(ps.ConfigPath); ps.Executor == nil {
 		return nil
 	}
 	ps.HomeDir = ps.Executor.WorkDir
 	ps.Server = &http.Server{
 		Addr:    ps.ListenAddr,
-		Handler: DefaultRouter(publicDir),
+		Handler: ps.DefaultRouter(),
 	}
 	return &ps
 }
 
-// LogDir return log directory path (currently is log under public dir)
-func (ps *PigstyServer) LogDir() string {
-	return filepath.Join(ps.PublicDir, "log")
+/****************************************************
+*  Log Info
+/****************************************************/
+// MakeLogDir will make sure log dir exists
+func MakeLogDir(path string) error {
+	logrus.Infof("check log dir %s", path)
+	_ = os.MkdirAll(path, 0755)
+	if fi, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+		if err = os.Mkdir(path, 0755); err != nil {
+			return fmt.Errorf("path exists and is regular file: %s %w", path, err)
+		}
+		return nil
+	} else {
+		if fi.IsDir() {
+			return nil // log dir exists (but still may not have right privilege)
+		} else {
+			return fmt.Errorf("path exists and is regular file: %s", path)
+		}
+	}
 }
 
 // LogInfo Hold log name, size, mtime info of job logs
@@ -74,7 +144,7 @@ type LogInfo struct {
 
 // ListLogdir will return
 func (ps *PigstyServer) ListLogDir() ([]LogInfo, error) {
-	logs, err := ioutil.ReadDir(ps.LogDir())
+	logs, err := ioutil.ReadDir(ps.DataDir)
 	if err != nil {
 		return nil, err
 	}
@@ -151,18 +221,33 @@ func (ps *PigstyServer) GetJob() *exec.Job {
 	return nil
 }
 
-func DefaultRouter(publicDir string) *gin.Engine {
+func (ps *PigstyServer) DefaultRouter() *gin.Engine {
 	r := gin.Default()
 	// config
+	r.GET("/api/v1/config", GetConfigHandler)
 	r.GET("/api/v1/config/", GetConfigHandler)
 	r.POST("/api/v1/config/", PostConfigHandler)
+	r.POST("/api/v1/config", PostConfigHandler)
 
-	// job (list get create del)
-	r.GET("/api/v1/jobs", ListJobHandler)
+	// job (get post del)
 	r.GET("/api/v1/job", GetJobHandler)
 	r.POST("/api/v1/job", PostJobHandler)
 	r.DELETE("/api/v1/job", DelJobHandler)
-	r.Use(static.Serve("/", static.LocalFile(publicDir, true)))
+
+	// log (list latest get)
+	r.GET("/api/v1/log/", ListLogHandler)
+	r.GET("/api/v1/log/latest", GetLatestLogHandler)
+	r.GET("/api/v1/log/:jobid", GetLogHandler)
+
+	// use embed static resource or public dir if specified
+	if ps.PublicDir == "" || ps.PublicDir == "embed" {
+		logrus.Infof("use embed public resource")
+		r.Use(static.Serve("/", EmbedFileSystem(http.FS(Resource))))
+	} else {
+		logrus.Infof("use public dir resource @ %s", ps.PublicDir)
+		r.Use(static.Serve("/", static.LocalFile(ps.PublicDir, false)))
+	}
+
 	return r
 }
 
@@ -192,10 +277,17 @@ func (ps *PigstyServer) Run() {
 }
 
 // InitDefaultServer will init default pigsty singleton
-func InitDefaultServer(configPath string, publicDir string, listenAddr string) {
-	PS = NewPigstyServer(configPath, publicDir, listenAddr)
+func InitDefaultServer(listenAddr, configPath, dataDir, publicDir string) {
+	logrus.Infof("pigsty server listen on %s , pigsty-config=%s  , dataDir=%s, publicDir=%s", listenAddr, configPath, dataDir, publicDir)
+	PS = NewPigstyServer(
+		WithListenAddress(listenAddr),
+		WithDataDir(dataDir),
+		WithPublicDir(publicDir),
+		WithConfigPath(configPath),
+	)
 	if PS == nil {
 		os.Exit(1)
 	}
+	gin.SetMode(gin.ReleaseMode)
 	PS.Run()
 }

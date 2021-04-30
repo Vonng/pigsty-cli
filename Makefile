@@ -34,6 +34,12 @@ test:
 	go build -o pigsty
 	mv pigsty ~/pigsty/pigsty
 
+serve:
+	./pigsty serve -i ~/pigsty/pigsty.yml -D /tmp/pigsty
+
+run: build serve
 
 install: build
 	sudo install -m 0755 pigsty /usr/local/bin/pigsty
+
+copy:

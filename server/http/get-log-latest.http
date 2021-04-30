@@ -1,0 +1,6 @@
+GET http://localhost:9633/api/v1/log/latest
+Accept: */*
+Cache-Control: no-cache
+
+###
+

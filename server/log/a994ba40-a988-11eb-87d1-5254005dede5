@@ -1,0 +1,133 @@
+2021-04-30 15:49:59,727 p=27621 u=root n=ansible | PLAY [Init EcoX Cluster] *******************************************************
+2021-04-30 15:49:59,768 p=27621 u=root n=ansible | TASK [ecox : Node configure disable firewall] **********************************
+2021-04-30 15:50:01,729 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:01,732 p=27621 u=root n=ansible | TASK [ecox : Node configure stop firewall] *************************************
+2021-04-30 15:50:02,315 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:02,319 p=27621 u=root n=ansible | TASK [ecox : Create os group postgres] *****************************************
+2021-04-30 15:50:02,794 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:02,803 p=27621 u=root n=ansible | TASK [ecox : Create dbsu postgres] *********************************************
+2021-04-30 15:50:03,419 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:03,423 p=27621 u=root n=ansible | TASK [ecox : Fix pg home directory ownership] **********************************
+2021-04-30 15:50:03,948 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:03,952 p=27621 u=root n=ansible | TASK [ecox : Copy PostgreSQL RPMS] *********************************************
+2021-04-30 15:50:06,430 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:06,433 p=27621 u=root n=ansible | TASK [ecox : Install PostgreSQL RPMS] ******************************************
+2021-04-30 15:50:08,901 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:08,905 p=27621 u=root n=ansible | TASK [ecox : Link /usr/pgsql to current version] *******************************
+2021-04-30 15:50:09,306 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:09,309 p=27621 u=root n=ansible | TASK [ecox : Add pg bin dir to profile path] ***********************************
+2021-04-30 15:50:09,961 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:09,964 p=27621 u=root n=ansible | TASK [ecox : Fix directory ownership] ******************************************
+2021-04-30 15:50:10,365 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:10,368 p=27621 u=root n=ansible | TASK [ecox : Copy EcoX RPMS] ***************************************************
+2021-04-30 15:50:11,292 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:11,296 p=27621 u=root n=ansible | TASK [ecox : Install EcoX RPMS] ************************************************
+2021-04-30 15:50:11,848 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:11,851 p=27621 u=root n=ansible | TASK [ecox : Copy EcoX systemd service file] ***********************************
+2021-04-30 15:50:12,548 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:12,552 p=27621 u=root n=ansible | TASK [ecox : Enable EcoX systemd] **********************************************
+2021-04-30 15:50:13,106 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:13,109 p=27621 u=root n=ansible | TASK [ecox : Copy pgbouncer pkg] ***********************************************
+2021-04-30 15:50:14,029 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:14,032 p=27621 u=root n=ansible | TASK [ecox : Install pgbouncer pkg] ********************************************
+2021-04-30 15:50:14,453 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:14,456 p=27621 u=root n=ansible | TASK [ecox : Check necessary variables exists] *********************************
+2021-04-30 15:50:14,476 p=27621 u=root n=ansible | ok: [172.21.0.16] => {
+    "changed": false, 
+    "msg": "All assertions passed"
+}
+2021-04-30 15:50:14,480 p=27621 u=root n=ansible | TASK [ecox : Fetch variables via pg_cluster] ***********************************
+2021-04-30 15:50:14,537 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:14,540 p=27621 u=root n=ansible | TASK [ecox : Set cluster basic facts for hosts] ********************************
+2021-04-30 15:50:14,604 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:14,607 p=27621 u=root n=ansible | TASK [ecox : Assert cluster primary singleton] *********************************
+2021-04-30 15:50:14,624 p=27621 u=root n=ansible | ok: [172.21.0.16] => {
+    "changed": false, 
+    "msg": "All assertions passed"
+}
+2021-04-30 15:50:14,628 p=27621 u=root n=ansible | TASK [ecox : Setup cluster primary ip address] *********************************
+2021-04-30 15:50:14,641 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:14,644 p=27621 u=root n=ansible | TASK [ecox : Setup repl upstream for primary] **********************************
+2021-04-30 15:50:14,657 p=27621 u=root n=ansible | skipping: [172.21.0.16]
+2021-04-30 15:50:14,660 p=27621 u=root n=ansible | TASK [ecox : Setup repl upstream for replicas] *********************************
+2021-04-30 15:50:14,678 p=27621 u=root n=ansible | skipping: [172.21.0.16]
+2021-04-30 15:50:14,681 p=27621 u=root n=ansible | TASK [ecox : Debug print instance summary] *************************************
+2021-04-30 15:50:14,697 p=27621 u=root n=ansible | ok: [172.21.0.16] => {
+    "msg": "cluster=pg-test2 service=pg-test2-primary instance=pg-test2-1 replication=[primary:itself]->172.21.0.16"
+}
+2021-04-30 15:50:14,700 p=27621 u=root n=ansible | TASK [ecox : Build zk cluster url] *********************************************
+2021-04-30 15:50:14,714 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:14,718 p=27621 u=root n=ansible | TASK [ecox : Build zkhost] *****************************************************
+2021-04-30 15:50:14,731 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:14,734 p=27621 u=root n=ansible | TASK [ecox : Check for existing postgres instance] *****************************
+2021-04-30 15:50:15,133 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:15,136 p=27621 u=root n=ansible | TASK [ecox : Set fact whether pg port is open] *********************************
+2021-04-30 15:50:15,152 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:15,155 p=27621 u=root n=ansible | TASK [ecox : Abort due to existing postgres instance] **************************
+2021-04-30 15:50:15,169 p=27621 u=root n=ansible | skipping: [172.21.0.16]
+2021-04-30 15:50:15,180 p=27621 u=root n=ansible | TASK [ecox : Clean existing postgres instance] *********************************
+2021-04-30 15:50:15,192 p=27621 u=root n=ansible | skipping: [172.21.0.16]
+2021-04-30 15:50:15,195 p=27621 u=root n=ansible | TASK [ecox : Shutdown existing postgres service] *******************************
+2021-04-30 15:50:15,618 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:15,622 p=27621 u=root n=ansible | TASK [ecox : Remove registerd zookeeper service] *******************************
+2021-04-30 15:50:16,028 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:16,031 p=27621 u=root n=ansible | TASK [ecox : Remove existing postgres data] ************************************
+2021-04-30 15:50:16,427 p=27621 u=root n=ansible | changed: [172.21.0.16] => (item=/pg)
+2021-04-30 15:50:16,431 p=27621 u=root n=ansible | TASK [ecox : Make sure main and backup dir exists] *****************************
+2021-04-30 15:50:16,828 p=27621 u=root n=ansible | ok: [172.21.0.16] => (item=/export)
+2021-04-30 15:50:16,831 p=27621 u=root n=ansible | TASK [ecox : Create postgres directory structure] ******************************
+2021-04-30 15:50:17,238 p=27621 u=root n=ansible | ok: [172.21.0.16] => (item=/export/postgres/pg-test2-13)
+2021-04-30 15:50:17,619 p=27621 u=root n=ansible | ok: [172.21.0.16] => (item=/export/postgres/pg-test2-13/bin)
+2021-04-30 15:50:17,996 p=27621 u=root n=ansible | ok: [172.21.0.16] => (item=/export/postgres/pg-test2-13/tmp)
+2021-04-30 15:50:18,396 p=27621 u=root n=ansible | changed: [172.21.0.16] => (item=/var/run/postgresql)
+2021-04-30 15:50:18,402 p=27621 u=root n=ansible | TASK [ecox : Create links from current cluster] ********************************
+2021-04-30 15:50:18,797 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:18,800 p=27621 u=root n=ansible | TASK [ecox : Check if postgres data folder exists] *****************************
+2021-04-30 15:50:19,326 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:19,331 p=27621 u=root n=ansible | TASK [ecox : Abort due to pgdata is exists] ************************************
+2021-04-30 15:50:19,346 p=27621 u=root n=ansible | skipping: [172.21.0.16]
+2021-04-30 15:50:19,351 p=27621 u=root n=ansible | TASK [ecox : Clean pgdata] *****************************************************
+2021-04-30 15:50:19,774 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:19,777 p=27621 u=root n=ansible | TASK [ecox : Make sure data dir exists] ****************************************
+2021-04-30 15:50:20,197 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:20,200 p=27621 u=root n=ansible | TASK [ecox : Copy postgres scripts to /pg/bin/] ********************************
+2021-04-30 15:50:21,867 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:21,870 p=27621 u=root n=ansible | TASK [ecox : Get config parameter page count] **********************************
+2021-04-30 15:50:22,262 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:22,265 p=27621 u=root n=ansible | TASK [ecox : Get config parameter page size] ***********************************
+2021-04-30 15:50:22,658 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:22,661 p=27621 u=root n=ansible | TASK [ecox : Tune shared buffer and work mem] **********************************
+2021-04-30 15:50:22,682 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:22,685 p=27621 u=root n=ansible | TASK [ecox : Hanlde small size mem occasion] ***********************************
+2021-04-30 15:50:22,703 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:22,706 p=27621 u=root n=ansible | TASK [ecox : Calculate postgres mem params] ************************************
+2021-04-30 15:50:22,722 p=27621 u=root n=ansible | skipping: [172.21.0.16]
+2021-04-30 15:50:22,726 p=27621 u=root n=ansible | TASK [ecox : Init postgres data] ***********************************************
+2021-04-30 15:50:24,305 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:24,308 p=27621 u=root n=ansible | TASK [ecox : Replace tuned postgres.conf] **************************************
+2021-04-30 15:50:25,191 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:25,195 p=27621 u=root n=ansible | TASK [ecox : Render hba rules] *************************************************
+2021-04-30 15:50:25,948 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:25,951 p=27621 u=root n=ansible | TASK [ecox : Generate ecox.conf] ***********************************************
+2021-04-30 15:50:26,712 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:26,716 p=27621 u=root n=ansible | TASK [ecox : Start PostgreSQL] *************************************************
+2021-04-30 15:50:28,240 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:28,243 p=27621 u=root n=ansible | TASK [ecox : Wait for postgres primary online] *********************************
+2021-04-30 15:50:28,761 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:28,765 p=27621 u=root n=ansible | TASK [ecox : Render init roles sql] ********************************************
+2021-04-30 15:50:29,543 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:29,546 p=27621 u=root n=ansible | TASK [ecox : Render init template sql] *****************************************
+2021-04-30 15:50:30,240 p=27621 u=root n=ansible | ok: [172.21.0.16]
+2021-04-30 15:50:30,243 p=27621 u=root n=ansible | TASK [ecox : Render default pg-init scripts] ***********************************
+2021-04-30 15:50:30,985 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:30,988 p=27621 u=root n=ansible | TASK [ecox : Execute initialization scripts] ***********************************
+2021-04-30 15:50:31,907 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:31,910 p=27621 u=root n=ansible | TASK [ecox : Stop primary] *****************************************************
+2021-04-30 15:50:32,520 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:32,524 p=27621 u=root n=ansible | TASK [ecox : Launch EcoX on primary instance] **********************************
+2021-04-30 15:50:33,042 p=27621 u=root n=ansible | changed: [172.21.0.16]
+2021-04-30 15:50:33,045 p=27621 u=root n=ansible | TASK [ecox : Wait for postgres primary online] *********************************
+2021-04-30 15:51:03,463 p=27621 u=root n=ansible | fatal: [172.21.0.16]: FAILED! => {"changed": false, "elapsed": 30, "msg": "Timeout when waiting for 172.21.0.16:5432"}
+2021-04-30 15:51:03,464 p=27621 u=root n=ansible | NO MORE HOSTS LEFT *************************************************************
+2021-04-30 15:51:03,464 p=27621 u=root n=ansible | PLAY RECAP *********************************************************************
+2021-04-30 15:51:03,464 p=27621 u=root n=ansible | 172.21.0.16                : ok=52   changed=23   unreachable=0    failed=1    skipped=6    rescued=0    ignored=0   

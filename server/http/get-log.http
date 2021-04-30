@@ -1,0 +1,6 @@
+GET http://localhost:9633/api/v1/log/ce2cd3dc-a986-11eb-a346-acde48001122
+Accept: */*
+Cache-Control: no-cache
+
+###
+
