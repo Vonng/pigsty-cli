@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 Ruohang Feng <rh@vonng.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,17 +22,17 @@ import (
 )
 
 var (
-	varServeListenAddress string
-	varServeDataDir       string
-	varServePublicDir     string
+	varServerListenAddress string
+	varServerDataDir       string
+	varServerPublicDir     string
 )
 
-// serveCmd represents the serve command
-var serveCmd = &cobra.Command{
-	Use:   "serve",
+// serverCmd represents the server command
+var serverCmd = &cobra.Command{
+	Use:   "server",
 	Short: "Launch pigsty API server",
 	Long: `Usage:
-    pigsty serve -i|--inventory   inventory file      (pigsty.yml by default)
+    pigsty server -i|--inventory   inventory file      (pigsty.yml by default)
                  -L|--listen-addr listen_address      (:9633 by default)
                  -P|--public-dir  public resource dir (embed by default)
                  -D|--data-dir     log dir            (/tmp/pigsty by default)
@@ -41,7 +41,7 @@ var serveCmd = &cobra.Command{
 EXAMPLE:
 
     # run server
-        pigsty serve -i ~/pigsty/pigsty.yml
+        pigsty server -i ~/pigsty/pigsty.yml
 
     # get config
         curl http://localhost:9633/api/v1/config
@@ -75,14 +75,14 @@ EXAMPLE:
 
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		logrus.Debugf("pigsty server @ %s , use config %s, data dir %s, public dir %s", varServeListenAddress, varConfig, varServeDataDir, varServePublicDir)
-		server.InitDefaultServer(varServeListenAddress, varConfig, varServeDataDir, varServePublicDir)
+		logrus.Debugf("pigsty server run @ %s , use config %s, data dir %s, public dir %s", varServerListenAddress, varConfig, varServerDataDir, varServerPublicDir)
+		server.InitDefaultServer(varServerListenAddress, varConfig, varServerDataDir, varServerPublicDir)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(serveCmd)
-	serveCmd.Flags().StringVarP(&varServeListenAddress, "listen-addr", "L", ":9633", "listen address")
-	serveCmd.Flags().StringVarP(&varServeDataDir, "data-dir", "D", "/tmp/pigsty", "temporary resource dir")
-	serveCmd.Flags().StringVarP(&varServePublicDir, "public-dir", "P", "embed", "public resource dir")
+	rootCmd.AddCommand(serverCmd)
+	serverCmd.Flags().StringVarP(&varServerListenAddress, "listen-addr", "L", ":9633", "listen address")
+	serverCmd.Flags().StringVarP(&varServerDataDir, "data-dir", "D", "/tmp/pigsty", "temporary resource dir")
+	serverCmd.Flags().StringVarP(&varServerPublicDir, "public-dir", "P", "embed", "public resource dir")
 }

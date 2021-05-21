@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
+	"io/fs"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -23,14 +24,7 @@ import (
 /****************************************************
 *  Embed Resources
 /****************************************************/
-
-//go:embed index.html
-//go:embed static
-//go:embed img
-//go:embed *.ico
-//go:embed *.png
-//go:embed *.json
-//go:embed *.txt
+//go:embed gui
 var Resource embed.FS
 
 type embedFileSystem struct {
@@ -42,6 +36,7 @@ func EmbedFileSystem(fs http.FileSystem) *embedFileSystem {
 }
 
 func (fs *embedFileSystem) Exists(prefix string, filepath string) bool {
+	logrus.Warnf("%s %s", prefix, filepath)
 	return true
 }
 
@@ -297,7 +292,11 @@ func (ps *PigstyServer) DefaultRouter() *gin.Engine {
 	// use embed static resource or public dir if specified
 	if ps.PublicDir == "" || ps.PublicDir == "embed" {
 		logrus.Infof("use embed public resource")
-		r.Use(static.Serve("/", EmbedFileSystem(http.FS(Resource))))
+		stripedFs, err := fs.Sub(Resource, "gui")
+		if err != nil {
+			logrus.Errorf("fail to load embed fs: %s", err.Error())
+		}
+		r.Use(static.Serve("/", EmbedFileSystem(http.FS(stripedFs))))
 	} else {
 		logrus.Infof("use public dir resource @ %s", ps.PublicDir)
 		r.Use(static.Serve("/", static.LocalFile(ps.PublicDir, true)))

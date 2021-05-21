@@ -2,7 +2,7 @@
 ######################################################################
 # File      :   pigsty.yml
 # Path      :   pigsty.yml
-# Desc      :   Pigsty Configuration file
+# Desc      :   Pigsty Configuration file Example
 # Note      :   follow ansible inventory file format
 # Ctime     :   2020-05-22
 # Mtime     :   2021-03-16

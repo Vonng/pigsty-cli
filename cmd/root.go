@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 Ruohang Feng <rh@vonng.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,10 +37,10 @@ var EX *exec.Executor
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "pigsty",
-	Short: "Pigsty Command-Line Interface v0.8",
+	Short: "Pigsty Command-Line Interface v0.9",
 	Long: `
 NAME
-    pigsty -- Pigsty Command-Line Interface v0.8 
+    pigsty -- Pigsty Command-Line Interface v0.9 
 
 SYNOPSIS               
 

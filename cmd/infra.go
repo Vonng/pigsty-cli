@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 NAME HERE <EMAIL ADDRESS>
+Copyright © 2021 Ruohang Feng <rh@vonng.com>
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -162,7 +162,7 @@ var infraLokiCmd = &cobra.Command{
 
 var infraPgsqlCmd = &cobra.Command{
 	Use:   "pgsql",
-	Short: "setup loki on meta nodes",
+	Short: "setup pgsql on meta nodes",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return EX.NewJob(
 			exec.WithPlaybook("infra.yml"),

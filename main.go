@@ -19,7 +19,7 @@ import (
 	"github.com/Vonng/pigsty-cli/cmd"
 )
 
-var Version = "0.8.0"
+var Version = "0.9.0"
 
 func main() {
 	cmd.Execute()

@@ -4,6 +4,17 @@
 Command line tools for [pigsty](https://github.com/Vonng/pigsty)
 
 
+To edit config with GUI, try:
+
+```bash
+pigsty server -i ~/pigsty/pigsty.yml
+```
+And access GUI via default port 9633
+
+
+
+
+
 ## Man
 
 ```
@@ -18,7 +29,7 @@ SYNOPSIS
     infra              setup infrastructure        init|ca|dns|prometheus|grafana|loki|haproxy|target
     clean              clean pgsql clusters        all|service|monitor|postgres|dcs
     config             mange pigsty config file    init|edit|info|dump|path
-    serve              run pigsty API server       init|start|stop|restart|reload|status
+    server             run pigsty API server       init|start|stop|restart|reload|status
     demo               setup local demo            init|up|new|clean|start|dns
     log                watch system log            query|postgres|patroni|pgbouncer|message
     pg                 pg operational tasks        user|db|svc|hba|log|psql|deploy|backup|restore|vacuum|repack

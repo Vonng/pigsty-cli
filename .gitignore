@@ -8,3 +8,5 @@ bin/
 .DS_Store
 .idea/
 .vscode/
+
+server/pigsty-gui/.git
